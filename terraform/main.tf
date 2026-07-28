@@ -9,7 +9,7 @@ terraform {
 
 # Configure the AWS Provider
 provider "aws" {
-  region = "eu-east-1"
+  region = "eu-central-1"
 }
 
 module "vpc" {
@@ -22,8 +22,8 @@ module "vpc" {
   private_subnets = ["10.0.1.0/24"]
   public_subnets  = ["10.0.101.0/24"]
 
-  enable_nat_gateway = true
-  enable_vpn_gateway = true
+  enable_nat_gateway = false
+  enable_vpn_gateway = false
 
   tags = {
     Terraform = "true"
@@ -39,7 +39,9 @@ module "ec2_instance" {
   instance_type = "t3.micro"
   key_name      = "user1"
   monitoring    = true
-  subnet_id     = module.vpc.private_subnets[0]
+  subnet_id     = module.vpc.public_subnets[0]
+  vpc_security_group_ids = [module.security_group.security_group_id]
+  associate_public_ip_address = true
 
   tags = {
     Terraform   = "true"
