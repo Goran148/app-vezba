@@ -6,6 +6,7 @@ Test proba 4
 Test proba 5
 Test proba 6
 Test proba 1
+<<<<<<< HEAD
 Test proba 2
 Test proba 3
 Test proba 4
@@ -31,3 +32,18 @@ Test proba 5
 Test proba 1
 ba 5
 Test proba 6
+=======
+Test proba 2Test proba 1
+Test proba 2Test proba 1
+Test proba 2Test proba 1
+Test proba 2Test proba 1
+Test proba 2Test proba 1
+Test proba 2Test proba 1
+Test proba 2Test proba 1
+Test proba 2Test proba 1
+Test proba 2Test proba 1
+Test proba 2Test proba 1
+Test proba 2Test proba 1
+Test proba 2Test proba 1
+Test proba 2
+>>>>>>> 5f22b0d0f28c3bc1fbf6b108f8c737886c9d809b
