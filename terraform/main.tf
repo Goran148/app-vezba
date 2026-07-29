@@ -1,83 +1,81 @@
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 6.0"
-    }
+data "aws_vpc" "default" {
+  default = true
+}
+
+data "aws_ami" "ubuntu" {
+  most_recent = true
+  owners      = ["099720109477"]
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
   }
 }
 
-# Configure the AWS Provider
-provider "aws" {
-  region = "eu-central-1"
-}
+resource "aws_security_group" "app_sg" {
+  name        = "app-sg-${var.environment}"
+  description = "Dozvoli SSH (22) HTTP (80) i App (5000) saobracaj"
+  vpc_id      = data.aws_vpc.default.id
 
-module "vpc" {
-  source = "terraform-aws-modules/vpc/aws"
-
-  name = "my-vpc"
-  cidr = "10.0.0.0/16"
-
-  azs             = ["eu-east-1a"]
-  private_subnets = ["10.0.1.0/24"]
-  public_subnets  = ["10.0.101.0/24"]
-
-  enable_nat_gateway = false
-  enable_vpn_gateway = false
-
-  tags = {
-    Terraform = "true"
-    Environment = "dev"
-  }
-}
-
-module "ec2_instance" {
-  source  = "terraform-aws-modules/ec2-instance/aws"
-
-  name = "App-Vezba"
-
-  instance_type = "t3.micro"
-  key_name      = "user1"
-  monitoring    = true
-  subnet_id     = module.vpc.public_subnets[0]
-  vpc_security_group_ids = [module.security_group.security_group_id]
-  associate_public_ip_address = true
-
-  tags = {
-    Terraform   = "true"
-    Environment = "dev"
-  }
-}
-
-module "security_group" {
-  source = "terraform-aws-modules/security-group/aws"
-
-  name        = "App-Vezba-SG"
-  description = "Example security group"
-  vpc_id      = module.vpc.vpc_id
-
-  ingress_rules = {
-    https = {
-      from_port   = 5000
-      ip_protocol = "tcp"
-      cidr_ipv4   = "10.0.0.0/16"
-      description = "HTTPS from internal"
-    }
-    self-all = {
-      ip_protocol                  = "-1"
-      referenced_security_group_id = "self"
-      description                  = "All traffic from members of this SG"
-    }
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
-  egress_rules = {
-    all = {
-      ip_protocol = "-1"
-      cidr_ipv4   = "0.0.0.0/0"
-    }
+  ingress {
+    description = "HTTP"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "Web App Custom Port"
+    from_port   = 5000
+    to_port     = 5000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   tags = {
-    Environment = "dev"
+    Name        = "app-sg-${var.environment}"
+    Environment = var.environment
+  }
+}
+
+resource "aws_instance" "app_server" {
+  ami                    = data.aws_ami.ubuntu.id
+  instance_type          = var.instance_type
+  key_name               = "moj-devops-kljuc"
+  vpc_security_group_ids = [aws_security_group.app_sg.id]
+
+  user_data = <<-EOF
+              #!/bin/bash
+              sudo apt-get update -y
+              sudo apt-get install -y docker.io
+              sudo systemctl start docker
+              sudo systemctl enable docker
+              sudo usermod -aG docker ubuntu
+              EOF
+
+
+  tags = {
+    Name        = "app-server-${var.environment}"
+    Environment = var.environment
   }
 }
