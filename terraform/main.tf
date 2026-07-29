@@ -79,3 +79,12 @@ resource "aws_instance" "app_server" {
     Environment = var.environment
   }
 }
+
+resource "aws_eip" "app_eip" {
+  instance = aws_instance.app_server.id
+  domain   = "vpc"
+
+  tags = {
+    Name = "flask-app-eip"
+  }
+}
